@@ -1,15 +1,14 @@
-from django.shortcuts import render
-from rest_framework import viewsets
+from rest_framework import generics
 from .models import Car
 from .serializers import CarSerializer
-from rest_framework.pagination import PageNumberPagination
+from .permissions import IsAdminOrReadOnly
 
-class StandardResults(PageNumberPagination):
-    page_size = 9
-    page_size_query_param = 'page_size'
-    max_page_size = 100
-
-class CarViewSet(viewsets.ModelViewSet):
+class CarListCreateView(generics.ListCreateAPIView):
     queryset = Car.objects.all()
     serializer_class = CarSerializer
-    pagination_class = StandardResults
+    permission_classes = [IsAdminOrReadOnly]
+
+class CarDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Car.objects.all()
+    serializer_class = CarSerializer
+    permission_classes = [IsAdminOrReadOnly]
