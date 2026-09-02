@@ -7,3 +7,7 @@ db.sqlite3
 .vscode/
 node_modules/
 backend/data.csv
+backend/cars_data.sql
+cars_backup.sql
+backend/cars_data.sql
+cars_backup.sql
