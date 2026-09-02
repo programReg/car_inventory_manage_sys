@@ -2,6 +2,12 @@ import React from "react";
 import "../styles.css";
 
 const Comparison = ({ cars }) => {
+  const formatValue = (feature, value) => {
+    if (feature === "price") return `$${Number(value).toLocaleString()}`;
+    if (feature === "mileage") return `${Number(value).toLocaleString()} miles`;
+    return value;
+  };
+
   return (
     <div className="comparison">
       <table>
@@ -10,7 +16,7 @@ const Comparison = ({ cars }) => {
             <th>Feature</th>
             {cars.map((car) => (
               <th key={car.id}>
-                {car.make} {car.model}
+                {car.year} {car.make} {car.model}
               </th>
             ))}
           </tr>
@@ -21,13 +27,13 @@ const Comparison = ({ cars }) => {
             "year",
             "mileage",
             "transmission",
-            "horsepower",
+            "drivetrain",
             "fuel",
           ].map((feature) => (
             <tr key={feature}>
               <td>{feature.charAt(0).toUpperCase() + feature.slice(1)}</td>
               {cars.map((car) => (
-                <td key={car.id}> {car[feature]}</td>
+                <td key={car.id}>{formatValue(feature, car[feature])}</td>
               ))}
             </tr>
           ))}

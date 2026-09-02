@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import CarDetail from "./CarDetails";
 import "../styles.css";
 
 const FlipCard = ({ car, onSelectCar, isSelected }) => {
@@ -20,13 +19,13 @@ const FlipCard = ({ car, onSelectCar, isSelected }) => {
       <div className="flip-card-inner">
         <div className="flip-card-front">
           <h3>
-            {car.make} {car.model}
+            {car.year} {car.make} {car.model}
           </h3>
-          <p>Year: {car.year}</p>
-          <p>Price: ${car.price}</p>
         </div>
         <div className="flip-card-back">
-          <CarDetail car={car} />
+          <h3>
+            {car.year} {car.make} {car.model}
+          </h3>
         </div>
       </div>
     </div>

@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { API_URL } from "./config";
 import "./styles.css";
 import CarList from "./components/CarList";
 import Comparison from "./components/Comparison";
 
 const App = () => {
   const [cars, setCars] = useState([]);
-  const [filteredCars, setFilteredCars] = useState([]);
   const [selectedCars, setSelectedCars] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [priceRange, setPriceRange] = useState({ min: 0, max: Infinity });
+  const [priceRange, setPriceRange] = useState({ min: "", max: "" });
   const [selectedBrand, setSelectedBrand] = useState("");
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,35 +18,37 @@ const App = () => {
   const [hasMore, setHasMore] = useState(true);
 
   useEffect(() => {
-    fetchCars();
+    setPage(1);
+    fetchCars(1, true);
+  }, [searchTerm, priceRange, selectedBrand]);
+
+  useEffect(() => {
+    if (page > 1) fetchCars(page, false);
   }, [page]);
 
-  const fetchCars = async () => {
+  const fetchCars = async (pageNum, replace) => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        `http://127.0.0.1:8000/api/cars/?page=${page}`
-      );
+      const params = { page: pageNum };
+      if (searchTerm) params.search = searchTerm;
+      if (selectedBrand) params.make = selectedBrand;
+      if (priceRange.min) params.min_price = priceRange.min;
+      if (priceRange.max) params.max_price = priceRange.max;
+
+      const response = await axios.get(`${API_URL}/cars/`, { params });
       const newCars = response.data.results;
 
-      if (page === 1) {
-        // Replace the entire list if it's the first page
-        setCars(newCars);
-        setFilteredCars(newCars);
-      } else {
-        // Append to the existing list for subsequent pages
-        setCars((prevCars) => [...prevCars, ...newCars]);
-        setFilteredCars((prevCars) => [...prevCars, ...newCars]);
+      setCars((prev) => (replace ? newCars : [...prev, ...newCars]));
+      setHasMore(response.data.next !== null);
+
+      if (replace) {
+        const autoBrands = [...new Set(newCars.map((car) => car.make))];
+        setBrands((prev) => [...new Set([...prev, ...autoBrands])]);
       }
 
-      const autoBrands = [
-        ...new Set([...cars, ...newCars].map((car) => car.make)),
-      ];
-      setBrands(autoBrands);
-      setHasMore(response.data.next !== null);
       setLoading(false);
-    } catch (error) {
-      console.error("Error fetching car data:", error);
+    } catch (err) {
+      console.error("Error fetching car data:", err);
       setError("Failed to fetch car data. Please try again later.");
       setLoading(false);
     }
@@ -54,34 +56,6 @@ const App = () => {
 
   const handleLoadMore = () => {
     setPage((prevPage) => prevPage + 1);
-  };
-
-  const handleSearch = (event) => {
-    const term = event.target.value.toLowerCase();
-    setSearchTerm(term);
-    filterCars(term, priceRange, selectedBrand);
-  };
-
-  const handlePriceRangeChange = (min, max) => {
-    setPriceRange({ min, max });
-    filterCars(searchTerm, { min, max }, selectedBrand);
-  };
-
-  const handleBrandSelect = (event) => {
-    const brand = event.target.value;
-    setSelectedBrand(brand);
-    filterCars(searchTerm, priceRange, brand);
-  };
-
-  const filterCars = (term, price, brand) => {
-    const filtered = cars.filter(
-      (car) =>
-        car.make.toLowerCase().includes(term) &&
-        car.price >= price.min &&
-        car.price <= price.max &&
-        (brand === "" || car.make.toLowerCase().includes(brand.toLowerCase()))
-    );
-    setFilteredCars(filtered);
   };
 
   const handleSelectCar = (car) => {
@@ -102,45 +76,48 @@ const App = () => {
     setSelectedCars([]);
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading && cars.length === 0) return <div>Loading...</div>;
   if (error) return <div>{error}</div>;
 
   return (
     <div className="container">
-      <h1> German Car Inventory Management System</h1>
+      <h1>Reggie's Vehicle Inventory</h1>
 
       <div className="filters">
         <input
           type="text"
           placeholder="Search cars..."
           value={searchTerm}
-          onChange={handleSearch}
+          onChange={(e) => setSearchTerm(e.target.value)}
           className="search-input"
         />
         <div className="price-range">
           <input
             type="number"
             placeholder="Minimum Price"
+            value={priceRange.min}
             onChange={(e) =>
-              handlePriceRangeChange(Number(e.target.value), priceRange.max)
+              setPriceRange({ ...priceRange, min: e.target.value })
             }
             className="price-input"
           />
           <input
             type="number"
             placeholder="Maximum Price"
+            value={priceRange.max}
             onChange={(e) =>
-              handlePriceRangeChange(
-                priceRange.min,
-                Number(e.target.value) || Infinity
-              )
+              setPriceRange({ ...priceRange, max: e.target.value })
             }
             className="price-input"
           />
         </div>
 
-        <select onChange={handleBrandSelect} className="brand-select">
-          <option value=""> All Brands</option>
+        <select
+          value={selectedBrand}
+          onChange={(e) => setSelectedBrand(e.target.value)}
+          className="brand-select"
+        >
+          <option value="">All Brands</option>
           {brands.map((brand) => (
             <option key={brand} value={brand}>
               {brand}
@@ -150,20 +127,23 @@ const App = () => {
       </div>
 
       <CarList
-        cars={filteredCars}
+        cars={cars}
         onSelectCar={handleSelectCar}
         selectedCars={selectedCars}
       />
+
       {hasMore && !loading && (
         <button onClick={handleLoadMore} className="load-more-btn">
           Load More
         </button>
       )}
-      {loading && <div>Loading...</div>}
-      {error && <div>{error}</div>}
+      {loading && cars.length > 0 && <div>Loading more...</div>}
+
       {selectedCars.length > 0 && (
         <div className="comparison-section">
-          <h2>Car Comparison</h2>
+          <h2>
+            {selectedCars.length === 1 ? "Car Details" : "Car Comparison"}
+          </h2>
           <button onClick={clearComparison} className="clear-all-btn">
             Clear All
           </button>
